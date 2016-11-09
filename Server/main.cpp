@@ -1,4 +1,12 @@
 #include <stdio.h>
+
+#include <stdlib.h>
+#include <stdint.h>
+
+#include <memory.h>
+//#include <sys/types.h> 
+//#include <sys/socket.h>
+#include <netinet/in.h>
 /*
  * изначально сервер принимает только два числа и умеет их складывать.
  * задачи:
@@ -9,12 +17,15 @@
 
 using namespace std;
 
+int waitForClient(int port);
+bool get_data(void *dst, int socket, size_t size);
+bool send_data(void *src,int socket,size_t size);
 
 
 int main(int argc, char **argv)
 {
 	int clientSockfd = -1;
-	clientSockfd = waitForClient();
+	clientSockfd = waitForClient(1212);
 	
 	/*
 	int operand1 = 0, operand2 = 0;
@@ -32,8 +43,12 @@ int main(int argc, char **argv)
 			int32_t answer = operands[0] + operands[1];
 			if(send_data(&answer, clientSockfd, sizeof(int32_t)))
 			{
+				printf("<= %d + %d = %d\n", operands[0], operands[1], answer);
+			}
+			else
+			{
 				perror("ERROR writing data");
-				exit(EXIT_FAILURE);					
+				exit(EXIT_FAILURE);	
 			}
 		}
 		else
@@ -49,14 +64,14 @@ int main(int argc, char **argv)
 /*
  * открыть сокет и ждать соединения
  */
-int waitForClient()
+int waitForClient(int port)
 {
 	socklen_t clilen; //размер структуры адреса клиента
 	int sockfd = -1; //дескриптор сокета
 	int clientSockfd = -1; //дескриптор сокета
 	struct sockaddr_in serv_addr, cli_addr; //структуры адресов
 	
-	int portno = 1212; //номер порта для прослушивания
+	int portno = port; //номер порта для прослушивания
 	
 	/*открытие сокета*/
 	sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -79,9 +94,10 @@ int waitForClient()
 	serv_addr.sin_port = htons(portno); //слушать порт portno
 	
 	/* назначить соответствие адреса и сокета */
-	while(bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr))<0)
+	if(bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr))<0)
     {
-		sleep(1); 
+		perror("ERROR binding socket");
+		exit(EXIT_FAILURE);
 	}
 
 	/* ждать клиента */

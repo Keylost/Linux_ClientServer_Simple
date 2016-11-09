@@ -1,2 +1,2 @@
 all:
-	g++ main.cpp -o bin/server
+	g++ main.cpp -o bin/client

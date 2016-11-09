@@ -1,20 +1,33 @@
 #include <stdio.h>
+
+#include <stdlib.h>
+#include <stdint.h>
+
+#include <memory.h>
+//#include <sys/types.h> 
+//#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h> //gethostbyname()
+
 /*
  * изначально сервер принимает только два числа и умеет их складывать.
  * задачи:
  * 1. сделать так, чтобы сервер мог принять и обработать выражения из двух операндов и одного оператора (+, - , *, /)
  * 2. произвольное число операндов и операторов и обработка приоритетов опреций
+ * 3. Добавить таймауты на подключение к серверу
  */
 
 
 using namespace std;
 
-
+int connect(const char* host, int port);
+bool get_data(void *dst, int socket, size_t size);
+bool send_data(void *src,int socket,size_t size);
 
 int main(int argc, char **argv)
 {
-	int clientSockfd = -1;
-	clientSockfd = waitForClient();
+	int serverSockfd = -1;
+	serverSockfd = connect("127.0.0.1",1212);
 	
 	/*
 	int operand1 = 0, operand2 = 0;
@@ -27,19 +40,34 @@ int main(int argc, char **argv)
 	while(true)
 	{
 		int32_t operands[2];
-		if(get_data(&operands, clientSockfd, sizeof(int32_t)*2))
+		int32_t answer = 0;
+		printf("Enter A: "); scanf("%d",operands);
+		printf("Enter B: "); scanf("%d",operands+1);
+		
+		if(send_data(&operands, serverSockfd, sizeof(int32_t)*2))
 		{
-			int32_t answer = operands[0] + operands[1];
-			if(send_data(&answer, clientSockfd, sizeof(int32_t)))
+			if(get_data(&answer, serverSockfd, sizeof(int32_t)))
 			{
-				perror("ERROR writing data");
+				printf("A+B=%d\n",answer);				
+			}
+			else
+			{
+				perror("ERROR reading data");
 				exit(EXIT_FAILURE);					
 			}
 		}
 		else
 		{
-			perror("ERROR reading data");
-			exit(EXIT_FAILURE);		
+			perror("ERROR writing data");
+			exit(EXIT_FAILURE);	
+		}
+		
+		printf("One more time? (Y/n) >> ");
+		char ans = 'y';
+		scanf("%s",&ans);
+		if(ans == 'N' || ans == 'n')
+		{
+			exit(EXIT_SUCCESS);
 		}
 	}
 	return 0;
@@ -47,49 +75,40 @@ int main(int argc, char **argv)
 
 
 /*
- * открыть сокет и ждать соединения
+ * подключение к серверу
  */
-int waitForClient()
+int connect(const char* host, int port)
 {
-	socklen_t clilen; //размер структуры адреса клиента
-	int sockfd = -1; //дескриптор сокета
-	int clientSockfd = -1; //дескриптор сокета
-	struct sockaddr_in serv_addr, cli_addr; //структуры адресов
+	struct sockaddr_in serv_addr;
+	struct hostent *server;		
+	int sockfd = -1;
 	
-	int portno = 1212; //номер порта для прослушивания
-	
-	/*открытие сокета*/
-	sockfd = socket(AF_INET, SOCK_STREAM, 0);
-	if (sockfd < 0)
+	if ( (sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
 	{
 		perror("ERROR opening socket");
 		exit(EXIT_FAILURE);
 	}
 	
-	
-	//sockOptEnable(sockfd,SO_KEEPALIVE);
-	//sockOptEnable(sockfd,SO_REUSEADDR);
-	
-	/* Заполнить память по адресу &serv_addr нулями */
-    bzero((char *) &serv_addr, sizeof(serv_addr));
-	
-	
-	serv_addr.sin_family = AF_INET;
-	serv_addr.sin_addr.s_addr = INADDR_ANY; //слушать все доступные адреса
-	serv_addr.sin_port = htons(portno); //слушать порт portno
-	
-	/* назначить соответствие адреса и сокета */
-	while(bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr))<0)
-    {
-		sleep(1); 
+	if ( (server = gethostbyname(host)) == NULL)
+	{
+		perror("ERROR, no such host");
+		exit(EXIT_FAILURE);
 	}
 
-	/* ждать клиента */
-	listen(sockfd,5);
-	clilen = sizeof(cli_addr);
-	clientSockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+	memset((char *) &serv_addr,0, sizeof(serv_addr));
+	serv_addr.sin_family = AF_INET;
+	memcpy((char *)&serv_addr.sin_addr.s_addr,
+			(char *)server->h_addr,
+			server->h_length);
+	serv_addr.sin_port = htons(port);
 	
-	return clientSockfd;
+	if (::connect(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0)
+	{
+		perror("ERROR connecting to server");
+		exit(EXIT_FAILURE);
+	}
+	
+	return sockfd;
 }
 
 /*
