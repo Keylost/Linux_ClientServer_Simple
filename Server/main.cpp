@@ -4,8 +4,8 @@
 #include <stdint.h>
 
 #include <memory.h>
-//#include <sys/types.h> 
-//#include <sys/socket.h>
+#include <sys/types.h> 
+#include <sys/socket.h>
 #include <netinet/in.h>
 /*
  * изначально сервер принимает только два числа и умеет их складывать.
@@ -82,8 +82,8 @@ int waitForClient(int port)
 	}
 	
 	
-	//sockOptEnable(sockfd,SO_KEEPALIVE);
-	//sockOptEnable(sockfd,SO_REUSEADDR);
+	sockOptEnable(sockfd,SO_KEEPALIVE);
+	sockOptEnable(sockfd,SO_REUSEADDR);
 	
 	/* Заполнить память по адресу &serv_addr нулями */
     bzero((char *) &serv_addr, sizeof(serv_addr));
