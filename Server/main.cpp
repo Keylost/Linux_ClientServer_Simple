@@ -7,6 +7,7 @@
 #include <sys/types.h> 
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <unistd.h>
 /*
  * изначально сервер принимает только два числа и умеет их складывать.
  * задачи:
@@ -94,10 +95,12 @@ int waitForClient(int port)
 	serv_addr.sin_port = htons(portno); //слушать порт portno
 	
 	/* назначить соответствие адреса и сокета */
-	if(bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr))<0)
+	while(bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr))<0)
     {
-		perror("ERROR binding socket");
-		exit(EXIT_FAILURE);
+		sleep(1);
+		printf("wait for binding..\n");
+		//perror("ERROR binding socket");
+		//exit(EXIT_FAILURE);
 	}
 
 	/* ждать клиента */
