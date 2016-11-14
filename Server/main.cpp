@@ -20,7 +20,7 @@ using namespace std;
 int waitForClient(int port);
 bool get_data(void *dst, int socket, size_t size);
 bool send_data(void *src,int socket,size_t size);
-
+void sockOptEnable(int sockfd, int optName);
 
 int main(int argc, char **argv)
 {
@@ -140,4 +140,16 @@ bool send_data(void *src,int socket,size_t size)
 		}
 	}
 	return true;
+}
+
+void sockOptEnable(int sockfd, int optName)
+{
+int32_t optval = 1;
+size_t optlen = sizeof(optval);
+if(setsockopt(sockfd, SOL_SOCKET, optName, (char *)&optval, optlen) < 0)
+{
+perror("sockOptEnable()");
+//close(sockfd);
+exit(EXIT_FAILURE);
+}
 }
